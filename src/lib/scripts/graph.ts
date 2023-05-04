@@ -81,12 +81,20 @@ export function drawGraph(
 	);
 
 	// Drawing the graph
+	ctx.strokeStyle = 'red';
 	ctx.beginPath();
 	ctx.moveTo(points[0].x, canvas.height - points[0].y);
 	for (let i = 1; i < points.length; i++) {
+		// End the stroke if a vertical asymptote is reached
+		if (Math.abs(points[i - 1].y - points[i].y) > canvas.height / 2) {
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.moveTo(points[i].x, canvas.height - points[i].y);
+			continue;
+		}
+
 		ctx.lineTo(points[i].x, canvas.height - points[i].y);
 	}
-	ctx.strokeStyle = 'red';
 	ctx.stroke();
 
 	ctx.strokeStyle = 'black';
