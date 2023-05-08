@@ -7,6 +7,50 @@ declare global {
 		// interface PageData {}
 		// interface Platform {}
 	}
+
+	type Point = {
+		x: number;
+		y: number;
+	};
+
+	type Formula = {
+		y?: string;
+		x?: string;
+		k?: {
+			y?: {
+				start: number;
+				end: number;
+				factor: number;
+			};
+			x?: {
+				start: number;
+				end: number;
+				factor: number;
+			};
+		};
+	};
+
+	type PointFormula = {
+		y?: string;
+		x?: string;
+		k?: {
+			y?: {
+				value: number;
+				factor: number;
+			};
+			x?: {
+				value: number;
+				factor: number;
+			};
+		};
+	};
+
+	type Dimensions = {
+		minX: number;
+		maxX: number;
+		minY: number;
+		maxY: number;
+	};
 }
 
 export {};

@@ -1,45 +1,16 @@
-type Point = {
-	x: number;
-	y: number;
-};
-
-export function calcPoints(
-	formula: {
-		y?: string;
-		x?: string;
-		k?: {
-			y?: {
-				start: number;
-				end: number;
-				factor: number;
-			};
-			x?: {
-				start: number;
-				end: number;
-				factor: number;
-			};
-		};
-	},
-	dimensions: {
-		minX: number;
-		maxX: number;
-		minY: number;
-		maxY: number;
-	},
-	step: number
-): Point[] {
+export function calcPoints(formula: Formula, dimensions: Dimensions, step: number): Point[] {
 	// #region Error handling
 	if (step <= 0) throw new Error('Step must be greater than 0');
 	if (dimensions.minX >= dimensions.maxX) throw new Error('minX must be less than maxX');
 	if (dimensions.minY >= dimensions.maxY) throw new Error('minY must be less than maxY');
 	if (formula.k) {
 		if (formula.k.y) {
-			if (formula.k.y.factor <= 0) throw new Error('k.y.step must be greater than 0');
+			if (formula.k.y.factor <= 0) throw new Error('k.y.factor must be greater than 0');
 			if (formula.k.y.start >= formula.k.y.end)
 				throw new Error('k.y.start must be less than k.y.end');
 		}
 		if (formula.k.x) {
-			if (formula.k.x.factor <= 0) throw new Error('k.x.step must be greater than 0');
+			if (formula.k.x.factor <= 0) throw new Error('k.x.factor must be greater than 0');
 			if (formula.k.x.start >= formula.k.x.end)
 				throw new Error('k.x.start must be less than k.x.end');
 		}
@@ -85,10 +56,46 @@ export function calcPoints(
 	return points;
 }
 
+export function solveFormula(
+	formula: PointFormula,
+	value: {
+		x?: number;
+		y?: number;
+	},
+	dimensions: Dimensions
+): number | undefined {
+	// #region Error handling
+	if (dimensions.minX >= dimensions.maxX) throw new Error('minX must be less than maxX');
+	if (dimensions.minY >= dimensions.maxY) throw new Error('minY must be less than maxY');
+	if (formula.k) {
+		if (formula.k.y && formula.k.y.factor <= 0) throw new Error('k.y.step must be greater than 0');
+		if (formula.k.x && formula.k.x.factor <= 0) throw new Error('k.x.step must be greater than 0');
+	} else {
+		formula.k = {
+			y: { value: 0, factor: 1 },
+			x: { value: 0, factor: 1 }
+		};
+	}
+	// #endregion
+
+	const ky = formula.k.y || { value: 0, factor: 1 };
+	const kx = formula.k.x || { value: 0, factor: 1 };
+
+	if (formula.y && value.x !== undefined) {
+		const y = new Function('x', `return ${formula.y} + ${ky.value * ky.factor}`)(value.x);
+		if (y >= dimensions.minY && y <= dimensions.maxY) return y;
+	}
+
+	if (formula.x && value.y !== undefined) {
+		const x = new Function('y', `return ${formula.x} + ${kx.value * kx.factor}`)(value.y);
+		if (x >= dimensions.minY && x <= dimensions.maxX) return x;
+	}
+}
+
 export function drawGraph(
 	canvas: HTMLCanvasElement,
 	points: Point[],
-	dimensions: { minX: number; maxX: number; minY: number; maxY: number },
+	dimensions: Dimensions,
 	options?: {
 		scale?: number;
 		stretch?: { x: number; y: number };
@@ -104,8 +111,7 @@ export function drawGraph(
 	if (!options.fontSize) options.fontSize = 14;
 
 	const { scale, stretch } = options;
-	canvas.width = Math.abs(dimensions.maxX - dimensions.minX) * scale * stretch.x;
-	canvas.height = Math.abs(dimensions.maxY - dimensions.minY) * scale * stretch.y;
+
 	// Translated origin coordinates
 	const origin = {
 		x: -dimensions.minX * scale * stretch.x,
@@ -128,7 +134,7 @@ export function drawGraph(
 
 	// Translate points to canvas coordinates
 	points = points.map((point) =>
-		translatePoint(point, dimensions, {
+		translatePoint(canvas, point, dimensions, {
 			scale,
 			stretch
 		})
@@ -137,13 +143,13 @@ export function drawGraph(
 	// Drawing the graph
 	ctx.strokeStyle = 'red';
 	ctx.beginPath();
-	ctx.moveTo(points[0].x, canvas.height - points[0].y);
+	ctx.moveTo(points[0].x, points[0].y);
 	for (let i = 1; i < points.length; i++) {
 		// End the stroke if a vertical asymptote is reached
 		if (Math.abs(points[i - 1].y - points[i].y) > canvas.height / 2) {
 			ctx.stroke();
 			ctx.beginPath();
-			ctx.moveTo(points[i].x, canvas.height - points[i].y);
+			ctx.moveTo(points[i].x, points[i].y);
 			continue;
 		}
 
@@ -151,11 +157,11 @@ export function drawGraph(
 		if (Math.abs(points[i - 1].x - points[i].x) > canvas.width / 2) {
 			ctx.stroke();
 			ctx.beginPath();
-			ctx.moveTo(points[i].x, canvas.height - points[i].y);
+			ctx.moveTo(points[i].x, points[i].y);
 			continue;
 		}
 
-		ctx.lineTo(points[i].x, canvas.height - points[i].y);
+		ctx.lineTo(points[i].x, points[i].y);
 	}
 	ctx.stroke();
 
@@ -182,7 +188,7 @@ function drawGrid(
 	const yAxisVisible = origin.x > 0 && origin.x < canvas.width;
 	const fontMargin = (fontSize * 6) / 14;
 
-	// Drawing the grid (in steps of 1 unit)
+	// Drawing the grid
 	ctx.strokeStyle = '#ddd';
 	ctx.lineWidth = 1;
 	ctx.beginPath();
@@ -221,12 +227,11 @@ function drawGrid(
 	}
 
 	// Drawing the numbers
-	ctx.font = `${fontSize}px Poppins`;
-	ctx.fillStyle = 'black';
 
 	// Origin
 	ctx.textAlign = 'right';
 	ctx.textBaseline = 'top';
+	ctx.font = `${fontSize}px Poppins`;
 	if (xAxisVisible && yAxisVisible) ctx.fillText('0', origin.x - fontMargin, origin.y + fontMargin);
 
 	// If the axis aren't visible, draw the numbers along the sides
@@ -237,18 +242,20 @@ function drawGrid(
 	let horNudge = 0;
 	ctx.textAlign = 'center';
 	ctx.textBaseline = xAxisVisible ? 'top' : 'bottom';
+	ctx.fillStyle = xAxisVisible ? 'black' : '#aaa';
+	ctx.font = `${xAxisVisible ? fontSize : fontSize * 0.9}px Poppins`;
 	for (let x = xStart; x <= canvas.width; x += xStep) {
 		if (x === origin.x) continue;
 
 		// If the number is too close to the left edge, nudge it to the right
-		if (yAxisVisible && x <= fontMargin) {
+		if (x <= fontMargin) {
 			ctx.textAlign = 'left';
 
 			horNudge = fontMargin;
 		}
 
 		// If the number is too close to the right edge, nudge it to the left
-		if (yAxisVisible && x >= canvas.width - fontMargin) {
+		if (x >= canvas.width - fontMargin) {
 			ctx.textAlign = 'right';
 
 			horNudge = -fontMargin;
@@ -268,18 +275,20 @@ function drawGrid(
 	let verNudge = 0;
 	ctx.textAlign = yAxisVisible ? 'right' : 'left';
 	ctx.textBaseline = 'middle';
+	ctx.fillStyle = yAxisVisible ? 'black' : '#aaa';
+	ctx.font = `${yAxisVisible ? fontSize : fontSize * 0.9}px Poppins`;
 	for (let y = yStart; y <= canvas.height; y += yStep) {
 		if (y === origin.y) continue;
 
 		// If the number is too close to the top edge, nudge it to the bottom
-		if (xAxisVisible && y <= fontMargin) {
+		if (y <= fontMargin) {
 			ctx.textBaseline = 'top';
 
 			verNudge = fontMargin;
 		}
 
 		// If the number is too close to the bottom edge, nudge it to the top
-		if (xAxisVisible && y >= canvas.height - fontMargin) {
+		if (y >= canvas.height - fontMargin) {
 			ctx.textBaseline = 'bottom';
 
 			verNudge = -fontMargin;
@@ -296,9 +305,44 @@ function drawGrid(
 	}
 }
 
-function translatePoint(
+export function drawPoint(
+	canvas: HTMLCanvasElement,
 	point: Point,
-	dimensions: { minX: number; maxX: number; minY: number; maxY: number },
+	dimensions: Dimensions,
+	options: {
+		scale: number;
+		stretch: { x: number; y: number };
+		fontSize: number;
+	}
+) {
+	const { fontSize } = options;
+	const radius = fontSize / 3;
+
+	const ctx = canvas.getContext('2d');
+	if (!ctx) return;
+
+	// Wipe canvas
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+	const translatedPoint = translatePoint(canvas, structuredClone(point), dimensions, options);
+
+	ctx.fillStyle = 'darkred';
+	ctx.beginPath();
+	ctx.arc(translatedPoint.x, translatedPoint.y, radius, 0, 2 * Math.PI);
+	ctx.fill();
+
+	// Draw the y value above it
+	ctx.textAlign = 'left';
+	ctx.textBaseline = 'middle';
+	ctx.fillStyle = '#777';
+	ctx.font = `${fontSize}px Poppins`;
+	ctx.fillText(point.y.toFixed(2).toString(), translatedPoint.x + 2 * radius, translatedPoint.y);
+}
+
+function translatePoint(
+	canvas: HTMLCanvasElement,
+	point: Point,
+	dimensions: Dimensions,
 	options: { scale: number; stretch: { x: number; y: number } }
 ): Point {
 	const { scale, stretch } = options;
@@ -310,5 +354,17 @@ function translatePoint(
 
 	point.x *= scale;
 	point.y *= scale;
+
+	point.y = canvas.height - point.y;
 	return point;
+}
+
+export function resizeCanvas(
+	canvas: HTMLCanvasElement,
+	dimensions: Dimensions,
+	options: { scale: number; stretch: { x: number; y: number } }
+) {
+	const { scale, stretch } = options;
+	canvas.width = Math.abs(dimensions.maxX - dimensions.minX) * scale * stretch.x;
+	canvas.height = Math.abs(dimensions.maxY - dimensions.minY) * scale * stretch.y;
 }
