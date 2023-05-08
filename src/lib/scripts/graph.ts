@@ -4,7 +4,22 @@ type Point = {
 };
 
 export function calcPoints(
-	formula: string,
+	formula: {
+		y?: string;
+		x?: string;
+		k?: {
+			y?: {
+				start: number;
+				end: number;
+				factor: number;
+			};
+			x?: {
+				start: number;
+				end: number;
+				factor: number;
+			};
+		};
+	},
 	dimensions: {
 		minX: number;
 		maxX: number;
@@ -13,19 +28,58 @@ export function calcPoints(
 	},
 	step: number
 ): Point[] {
+	// #region Error handling
 	if (step <= 0) throw new Error('Step must be greater than 0');
 	if (dimensions.minX >= dimensions.maxX) throw new Error('minX must be less than maxX');
 	if (dimensions.minY >= dimensions.maxY) throw new Error('minY must be less than maxY');
+	if (formula.k) {
+		if (formula.k.y) {
+			if (formula.k.y.factor <= 0) throw new Error('k.y.step must be greater than 0');
+			if (formula.k.y.start >= formula.k.y.end)
+				throw new Error('k.y.start must be less than k.y.end');
+		}
+		if (formula.k.x) {
+			if (formula.k.x.factor <= 0) throw new Error('k.x.step must be greater than 0');
+			if (formula.k.x.start >= formula.k.x.end)
+				throw new Error('k.x.start must be less than k.x.end');
+		}
+	} else {
+		formula.k = {
+			y: { start: 0, end: 0, factor: 1 },
+			x: { start: 0, end: 0, factor: 1 }
+		};
+	}
+	// #endregion
+	const ky = formula.k.y || { start: 0, end: 0, factor: 1 };
+	const kx = formula.k.x || { start: 0, end: 0, factor: 1 };
 
 	const points: Point[] = [];
-	let x = dimensions.minX;
 
-	while (x <= dimensions.maxX) {
-		const y = new Function('x', `return ${formula}`)(x);
-		if (y >= dimensions.minY && y <= dimensions.maxY) {
-			points.push({ x, y });
+	if (formula.y)
+		for (let k = ky.start; k <= ky.end; k += 1) {
+			let x = dimensions.minX;
+
+			while (x <= dimensions.maxX) {
+				const y = new Function('x', `return ${formula.y} + ${k * ky.factor}`)(x);
+				if (y >= dimensions.minY && y <= dimensions.maxY) {
+					points.push({ x, y });
+				}
+				x += step;
+			}
 		}
-		x += step;
+
+	if (formula.x) {
+		for (let k = kx.start; k <= kx.end; k += 1) {
+			let y = dimensions.minY;
+
+			while (y <= dimensions.maxY) {
+				const x = new Function('y', `return ${formula.x} + ${k * kx.factor}`)(y);
+				if (x >= dimensions.minX && x <= dimensions.maxX) {
+					points.push({ x, y });
+				}
+				y += step;
+			}
+		}
 	}
 
 	return points;
@@ -87,6 +141,14 @@ export function drawGraph(
 	for (let i = 1; i < points.length; i++) {
 		// End the stroke if a vertical asymptote is reached
 		if (Math.abs(points[i - 1].y - points[i].y) > canvas.height / 2) {
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.moveTo(points[i].x, canvas.height - points[i].y);
+			continue;
+		}
+
+		// End the stroke if a horizontal asymptote is reached
+		if (Math.abs(points[i - 1].x - points[i].x) > canvas.width / 2) {
 			ctx.stroke();
 			ctx.beginPath();
 			ctx.moveTo(points[i].x, canvas.height - points[i].y);
@@ -172,18 +234,65 @@ function drawGrid(
 	const numYAxis = yAxisVisible ? origin.x : 2 * fontMargin;
 
 	// Horizontal
+	let horNudge = 0;
 	ctx.textAlign = 'center';
 	ctx.textBaseline = xAxisVisible ? 'top' : 'bottom';
 	for (let x = xStart; x <= canvas.width; x += xStep) {
 		if (x === origin.x) continue;
-		ctx.fillText(((x - origin.x) / (scale * stretch.x)).toString(), x, numXAxis + fontMargin);
+
+		// If the number is too close to the left edge, nudge it to the right
+		if (yAxisVisible && x <= fontMargin) {
+			ctx.textAlign = 'left';
+
+			horNudge = fontMargin;
+		}
+
+		// If the number is too close to the right edge, nudge it to the left
+		if (yAxisVisible && x >= canvas.width - fontMargin) {
+			ctx.textAlign = 'right';
+
+			horNudge = -fontMargin;
+		}
+
+		ctx.fillText(
+			((x - origin.x) / (scale * stretch.x)).toString(),
+			x + horNudge,
+			numXAxis + fontMargin
+		);
+
+		horNudge = 0;
+		ctx.textAlign = 'center';
 	}
+
 	// Vertical
+	let verNudge = 0;
 	ctx.textAlign = yAxisVisible ? 'right' : 'left';
 	ctx.textBaseline = 'middle';
 	for (let y = yStart; y <= canvas.height; y += yStep) {
 		if (y === origin.y) continue;
-		ctx.fillText(((origin.y - y) / (scale * stretch.y)).toString(), numYAxis - fontMargin, y);
+
+		// If the number is too close to the top edge, nudge it to the bottom
+		if (xAxisVisible && y <= fontMargin) {
+			ctx.textBaseline = 'top';
+
+			verNudge = fontMargin;
+		}
+
+		// If the number is too close to the bottom edge, nudge it to the top
+		if (xAxisVisible && y >= canvas.height - fontMargin) {
+			ctx.textBaseline = 'bottom';
+
+			verNudge = -fontMargin;
+		}
+
+		ctx.fillText(
+			((origin.y - y) / (scale * stretch.y)).toString(),
+			numYAxis - fontMargin,
+			y + verNudge
+		);
+
+		verNudge = 0;
+		ctx.textBaseline = 'middle';
 	}
 }
 

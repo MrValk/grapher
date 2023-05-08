@@ -4,28 +4,31 @@
 
 	function draw(canvasEl: HTMLCanvasElement) {
 		// 1 / (1 + Math.pow(Math.E, -x))
-		const formula = '1 / x';
-		const dimensions = {
-			minX: -10,
-			maxX: 10,
-			minY: -10,
-			maxY: 10
+		const formula = {
+			y: '1 / (1 + Math.pow(Math.E, -x))'
 		};
-		const step = 0.01;
+		const dimensions = {
+			minX: -6,
+			maxX: 6,
+			minY: -0.5,
+			maxY: 1.5
+		};
+		const step = 0.0001;
 		const stretch = {
 			x: 1,
-			y: 1
+			y: 4
 		};
+		const scale = 75;
 		const gridStep = {
-			x: 1,
-			y: 1
+			x: 2,
+			y: 0.5
 		};
 		const fontSize = 14;
 
 		const points = calcPoints(formula, dimensions, step);
 		drawGraph(canvasEl, points, dimensions, {
 			stretch,
-			scale: 40,
+			scale,
 			gridStep,
 			fontSize
 		});
