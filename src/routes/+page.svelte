@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
-	import { solveFormula, calcPoints, drawGraph, drawPoint, resizeCanvas } from '$lib/scripts/graph';
+	import { solveFormula, drawGraph, drawPoint, resizeCanvas } from '$lib/scripts/graph';
+	import { calcPoints } from '$lib/scripts/formula';
 
 	let pointCanvasEl: HTMLCanvasElement;
 
@@ -34,7 +35,8 @@
 
 	function graph(canvasEl: HTMLCanvasElement) {
 		resizeCanvas(canvasEl, dimensions, { scale, stretch });
-		const points = calcPoints(structuredClone(formula), dimensions, step);
+		// const points = calcPoints(structuredClone(formula), dimensions, step);
+		const points = calcPoints('y = 1 / (1 + E^(-x))', dimensions, step);
 		drawGraph(canvasEl, points, dimensions, {
 			stretch,
 			scale,

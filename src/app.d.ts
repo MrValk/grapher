@@ -9,8 +9,7 @@ declare global {
 	}
 
 	type Point = {
-		x: number;
-		y: number;
+		[varName: string]: number;
 	};
 
 	type Formula = {
