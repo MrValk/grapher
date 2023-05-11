@@ -35,7 +35,6 @@
 	"type": "module",
 	"dependencies": {
 		"mathjax": "^3.2.2",
-		"mathjs": "^11.8.0",
 		"nerdamer": "^1.1.13",
 		"patch-package": "^7.0.0"
 	}

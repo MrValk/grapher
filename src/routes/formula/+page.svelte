@@ -8,10 +8,10 @@
 		calcPoints(
 			'a = 5 - b',
 			{
-				minX: -10,
-				maxX: 10,
-				minY: -10,
-				maxY: 10
+				minHor: -10,
+				maxHor: 10,
+				minVer: -10,
+				maxVer: 10
 			},
 			0.1,
 			{ c: 2 }

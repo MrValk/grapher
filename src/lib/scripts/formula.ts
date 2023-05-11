@@ -27,12 +27,14 @@ export function calcPoints(
 	formula: string,
 	dimensions: Dimensions,
 	step = 0.1,
-	consts?: { [varName: string]: number }
+	consts?: { [constName: string]: number }
 ): Point[] {
 	// #region Input values error handling
 	if (step <= 0) throw new Error('Step must be greater than 0');
-	if (dimensions.minX >= dimensions.maxX) throw new Error('minX must be less than maxX');
-	if (dimensions.minY >= dimensions.maxY) throw new Error('minY must be less than maxY');
+	if (dimensions.horizontal.min >= dimensions.horizontal.max)
+		throw new Error('minX must be less than maxX');
+	if (dimensions.vertical.min >= dimensions.vertical.max)
+		throw new Error('minY must be less than maxY');
 	// #endregion
 
 	// Fill in the constant values
@@ -62,16 +64,16 @@ export function calcPoints(
 			: [variables[1], variables[0]];
 
 	// Solve for both variables
-	let yEquals: string[] = [];
-	let xEquals: string[] = [];
+	let verEquals: string[] = [];
+	let horEquals: string[] = [];
 
 	// If the formula already starts with verticalVar = something, don't solve for it
 	if (verticalVar) {
 		if (formula.replace(/\s/g, '').startsWith(`${verticalVar}=`))
-			yEquals.push(formula.replace(/\s/g, '').replace(`${verticalVar}=`, ''));
+			verEquals.push(formula.replace(/\s/g, '').replace(`${verticalVar}=`, ''));
 		else
 			try {
-				yEquals = solveFor(formula, verticalVar);
+				verEquals = solveFor(formula, verticalVar);
 			} catch (e) {
 				console.error(e);
 			}
@@ -80,45 +82,45 @@ export function calcPoints(
 	// If the formula already starts with horizontalVar = something, don't solve for it
 	if (horizontalVar) {
 		if (formula.replace(/\s/g, '').startsWith(`${horizontalVar}=`))
-			xEquals.push(formula.replace(/\s/g, '').replace(`${horizontalVar}=`, ''));
+			horEquals.push(formula.replace(/\s/g, '').replace(`${horizontalVar}=`, ''));
 		else
 			try {
-				xEquals = solveFor(formula, horizontalVar);
+				horEquals = solveFor(formula, horizontalVar);
 			} catch (e) {
 				console.error(e);
 			}
 	}
 
-	if (yEquals.length === 0 && xEquals.length === 0)
+	if (verEquals.length === 0 && horEquals.length === 0)
 		throw new Error('Formula could not be solved for either variable');
-	if (verticalVar && yEquals.length === 0)
+	if (verticalVar && verEquals.length === 0)
 		console.warn(`Formula could not be solved for ${verticalVar}`);
-	if (horizontalVar && xEquals.length === 0)
+	if (horizontalVar && horEquals.length === 0)
 		console.warn(`Formula could not be solved for ${horizontalVar}`);
 
 	// Optimization for equations with only one variable
 	if (variables.length === 1) {
 		if (horizontalVar === 'x') {
-			const x = parseFloat(xEquals[0]);
+			const x = parseFloat(horEquals[0]);
 			return [
 				{
 					x,
-					y: dimensions.minY
+					y: dimensions.vertical.min
 				},
 				{
 					x,
-					y: dimensions.maxY
+					y: dimensions.vertical.max
 				}
 			];
 		} else if (verticalVar) {
-			const value = parseFloat(yEquals[0]);
+			const value = parseFloat(verEquals[0]);
 			return [
 				{
-					x: dimensions.minX,
+					x: dimensions.horizontal.min,
 					[verticalVar]: value
 				},
 				{
-					x: dimensions.maxX,
+					x: dimensions.horizontal.max,
 					[verticalVar]: value
 				}
 			];
@@ -129,30 +131,30 @@ export function calcPoints(
 
 	// Calculate the points
 	const points: Point[] = [];
-	if (yEquals.length > 0)
-		for (let x = dimensions.minX; x <= dimensions.maxX; x += step) {
-			for (const yEqual of yEquals) {
+	if (verEquals.length > 0)
+		for (let x = dimensions.horizontal.min; x <= dimensions.horizontal.max; x += step) {
+			for (const yEqual of verEquals) {
 				let y: number;
 				try {
 					y = parseFloat(solve(yEqual, { [horizontalVar]: x }).toString());
 				} catch (_) {
 					continue;
 				}
-				if (y >= dimensions.minY && y <= dimensions.maxY)
+				if (y >= dimensions.vertical.min && y <= dimensions.vertical.max)
 					points.push({ [horizontalVar]: x, [verticalVar]: y });
 			}
 		}
 
-	if (xEquals.length > 0)
-		for (let y = dimensions.minY; y <= dimensions.maxY; y += step) {
-			for (const xEqual of xEquals) {
+	if (horEquals.length > 0)
+		for (let y = dimensions.vertical.min; y <= dimensions.vertical.max; y += step) {
+			for (const xEqual of horEquals) {
 				let x: number;
 				try {
 					x = parseFloat(solve(xEqual, { [verticalVar]: y }).toString());
 				} catch (_) {
 					continue;
 				}
-				if (x >= dimensions.minX && x <= dimensions.maxX)
+				if (x >= dimensions.horizontal.min && x <= dimensions.horizontal.max)
 					points.push({ [horizontalVar]: x, [verticalVar]: y });
 			}
 		}

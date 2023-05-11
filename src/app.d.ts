@@ -12,43 +12,27 @@ declare global {
 		[varName: string]: number;
 	};
 
-	type Formula = {
-		y?: string;
-		x?: string;
-		k?: {
-			y?: {
-				start: number;
-				end: number;
-				factor: number;
-			};
-			x?: {
-				start: number;
-				end: number;
-				factor: number;
-			};
-		};
+	type Options = {
+		stretch?: { horizontal: number; vertical: number };
+		gridStep?: { horizontal: number; vertical: number };
+		fontSize?: number;
 	};
 
-	type PointFormula = {
-		y?: string;
-		x?: string;
-		k?: {
-			y?: {
-				value: number;
-				factor: number;
-			};
-			x?: {
-				value: number;
-				factor: number;
-			};
-		};
+	type DefinedOptions = {
+		stretch: { horizontal: number; vertical: number };
+		gridStep: { horizontal: number; vertical: number };
+		fontSize: number;
 	};
 
 	type Dimensions = {
-		minX: number;
-		maxX: number;
-		minY: number;
-		maxY: number;
+		horizontal: {
+			min: number;
+			max: number;
+		};
+		vertical: {
+			min: number;
+			max: number;
+		};
 	};
 }
 

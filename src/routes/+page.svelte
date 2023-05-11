@@ -1,5 +1,4 @@
 <script lang="ts">
-	import '../app.css';
 	import { solveFormula, drawGraph, drawPoint, resizeCanvas } from '$lib/scripts/graph';
 	import { calcPoints } from '$lib/scripts/formula';
 
@@ -12,11 +11,11 @@
 	const pointFormula: PointFormula = {
 		y: '1 / (1 + Math.pow(Math.E, -x))'
 	};
-	const dimensions = {
-		minX: -6,
-		maxX: 6,
-		minY: -0.5,
-		maxY: 1.5
+	const dimensions: Dimensions = {
+		minHor: -6,
+		maxHor: 6,
+		minVer: -0.5,
+		maxVer: 1.5
 	};
 	const step = 0.1;
 	const stretch = {
@@ -100,8 +99,8 @@
 					on:input={() => {
 						pointX(pointCanvasEl);
 					}}
-					min={dimensions.minX}
-					max={dimensions.maxX}
+					min={dimensions.horizontal.min}
+					max={dimensions.horizontal.max}
 					{step}
 				/>
 				<p>x = {xValue}</p>
@@ -116,8 +115,8 @@
 					on:input={() => {
 						pointY(pointCanvasEl);
 					}}
-					min={dimensions.minY}
-					max={dimensions.maxY}
+					min={dimensions.vertical.min}
+					max={dimensions.vertical.max}
 					{step}
 				/>
 				<p>y = {yValue}</p>

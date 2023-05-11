@@ -1,8 +1,10 @@
 export function calcPoints(formula: Formula, dimensions: Dimensions, step: number): Point[] {
 	// #region Error handling
 	if (step <= 0) throw new Error('Step must be greater than 0');
-	if (dimensions.minX >= dimensions.maxX) throw new Error('minX must be less than maxX');
-	if (dimensions.minY >= dimensions.maxY) throw new Error('minY must be less than maxY');
+	if (dimensions.horizontal.min >= dimensions.horizontal.max)
+		throw new Error('minX must be less than maxX');
+	if (dimensions.vertical.min >= dimensions.vertical.max)
+		throw new Error('minY must be less than maxY');
 	if (formula.k) {
 		if (formula.k.y) {
 			if (formula.k.y.factor <= 0) throw new Error('k.y.factor must be greater than 0');
@@ -28,11 +30,11 @@ export function calcPoints(formula: Formula, dimensions: Dimensions, step: numbe
 
 	if (formula.y)
 		for (let k = ky.start; k <= ky.end; k += 1) {
-			let x = dimensions.minX;
+			let x = dimensions.horizontal.min;
 
-			while (x <= dimensions.maxX) {
+			while (x <= dimensions.horizontal.max) {
 				const y = new Function('x', `return ${formula.y} + ${k * ky.factor}`)(x);
-				if (y >= dimensions.minY && y <= dimensions.maxY) {
+				if (y >= dimensions.vertical.min && y <= dimensions.vertical.max) {
 					points.push({ x, y });
 				}
 				x += step;
@@ -41,11 +43,11 @@ export function calcPoints(formula: Formula, dimensions: Dimensions, step: numbe
 
 	if (formula.x) {
 		for (let k = kx.start; k <= kx.end; k += 1) {
-			let y = dimensions.minY;
+			let y = dimensions.vertical.min;
 
-			while (y <= dimensions.maxY) {
+			while (y <= dimensions.vertical.max) {
 				const x = new Function('y', `return ${formula.x} + ${k * kx.factor}`)(y);
-				if (x >= dimensions.minX && x <= dimensions.maxX) {
+				if (x >= dimensions.horizontal.min && x <= dimensions.horizontal.max) {
 					points.push({ x, y });
 				}
 				y += step;
@@ -65,8 +67,10 @@ export function solveFormula(
 	dimensions: Dimensions
 ): number | undefined {
 	// #region Error handling
-	if (dimensions.minX >= dimensions.maxX) throw new Error('minX must be less than maxX');
-	if (dimensions.minY >= dimensions.maxY) throw new Error('minY must be less than maxY');
+	if (dimensions.horizontal.min >= dimensions.horizontal.max)
+		throw new Error('minX must be less than maxX');
+	if (dimensions.vertical.min >= dimensions.vertical.max)
+		throw new Error('minY must be less than maxY');
 	if (formula.k) {
 		if (formula.k.y && formula.k.y.factor <= 0) throw new Error('k.y.step must be greater than 0');
 		if (formula.k.x && formula.k.x.factor <= 0) throw new Error('k.x.step must be greater than 0');
@@ -83,12 +87,12 @@ export function solveFormula(
 
 	if (formula.y && value.x !== undefined) {
 		const y = new Function('x', `return ${formula.y} + ${ky.value * ky.factor}`)(value.x);
-		if (y >= dimensions.minY && y <= dimensions.maxY) return y;
+		if (y >= dimensions.vertical.min && y <= dimensions.vertical.max) return y;
 	}
 
 	if (formula.x && value.y !== undefined) {
 		const x = new Function('y', `return ${formula.x} + ${kx.value * kx.factor}`)(value.y);
-		if (x >= dimensions.minY && x <= dimensions.maxX) return x;
+		if (x >= dimensions.vertical.min && x <= dimensions.horizontal.max) return x;
 	}
 }
 
@@ -114,8 +118,8 @@ export function drawGraph(
 
 	// Translated origin coordinates
 	const origin = {
-		x: -dimensions.minX * scale * stretch.x,
-		y: canvas.height + dimensions.minY * scale * stretch.y
+		x: -dimensions.horizontal.min * scale * stretch.x,
+		y: canvas.height + dimensions.vertical.min * scale * stretch.y
 	};
 
 	const ctx = canvas.getContext('2d');
@@ -349,8 +353,8 @@ function translatePoint(
 	point.x *= stretch.x;
 	point.y *= stretch.y;
 
-	point.x -= dimensions.minX * stretch.x;
-	point.y -= dimensions.minY * stretch.y;
+	point.x -= dimensions.horizontal.min * stretch.x;
+	point.y -= dimensions.vertical.min * stretch.y;
 
 	point.x *= scale;
 	point.y *= scale;
@@ -365,6 +369,7 @@ export function resizeCanvas(
 	options: { scale: number; stretch: { x: number; y: number } }
 ) {
 	const { scale, stretch } = options;
-	canvas.width = Math.abs(dimensions.maxX - dimensions.minX) * scale * stretch.x;
-	canvas.height = Math.abs(dimensions.maxY - dimensions.minY) * scale * stretch.y;
+	canvas.width =
+		Math.abs(dimensions.horizontal.max - dimensions.horizontal.min) * scale * stretch.x;
+	canvas.height = Math.abs(dimensions.vertical.max - dimensions.vertical.min) * scale * stretch.y;
 }
