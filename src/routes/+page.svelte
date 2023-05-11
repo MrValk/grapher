@@ -1,126 +1,62 @@
 <script lang="ts">
-	import { solveFormula, drawGraph, drawPoint, resizeCanvas } from '$lib/scripts/graph';
-	import { calcPoints } from '$lib/scripts/formula';
+	import { Formula } from '$lib/Formula';
+	import type { Graph } from '$lib/Graph';
+	import { GraphBuilder } from '$lib/GraphBuilder';
 
-	let pointCanvasEl: HTMLCanvasElement;
+	let graph: Graph;
+	let xCoordinate: number;
+	let yCoordinate: number;
 
-	// 1 / (1 + Math.pow(Math.E, -x))
-	const formula: Formula = {
-		y: '1 / (1 + Math.pow(Math.E, -x))'
-	};
-	const pointFormula: PointFormula = {
-		y: '1 / (1 + Math.pow(Math.E, -x))'
-	};
-	const dimensions: Dimensions = {
-		minHor: -6,
-		maxHor: 6,
-		minVer: -0.5,
-		maxVer: 1.5
-	};
-	const step = 0.1;
-	const stretch = {
-		x: 1,
-		y: 4
-	};
-	const scale = 75;
-	const gridStep = {
-		x: 2,
-		y: 0.5
-	};
-	const fontSize = 14;
-
-	let xValue = 0;
-	let yValue = 0;
-
-	function graph(canvasEl: HTMLCanvasElement) {
-		resizeCanvas(canvasEl, dimensions, { scale, stretch });
-		// const points = calcPoints(structuredClone(formula), dimensions, step);
-		const points = calcPoints('y = 1 / (1 + E^(-x))', dimensions, step);
-		drawGraph(canvasEl, points, dimensions, {
-			stretch,
-			scale,
-			gridStep,
-			fontSize
-		});
-	}
-
-	function pointX(canvasEl: HTMLCanvasElement) {
-		resizeCanvas(canvasEl, dimensions, { scale, stretch });
-		const value = solveFormula(pointFormula, { x: xValue }, dimensions);
-		if (value) {
-			yValue = value;
-			drawPoint(
-				canvasEl,
-				{
-					x: xValue,
-					y: yValue
+	function drawGraph(canvas: HTMLCanvasElement) {
+		const formula = new Formula('y = tan(x)', 0.1);
+		graph = new GraphBuilder(canvas, formula)
+			.setDimensions({
+				horizontal: {
+					min: -6,
+					max: 6
 				},
-				dimensions,
-				{
-					stretch,
-					scale,
-					fontSize
+				vertical: {
+					min: -0.5,
+					max: 1.5
 				}
-			);
-		}
-	}
+			})
+			.setStretch({
+				horizontal: 1,
+				vertical: 4
+			})
+			.setGridStep({
+				horizontal: 2,
+				vertical: 0.5
+			})
+			.drawPoint({
+				x: 0.2
+			})
+			.get();
 
-	function pointY(canvasEl: HTMLCanvasElement) {
-		resizeCanvas(canvasEl, dimensions, { scale, stretch });
-		const value = solveFormula(pointFormula, { y: yValue }, dimensions);
-		if (value) {
-			xValue = value;
-			drawPoint(
-				canvasEl,
-				{
-					x: xValue,
-					y: yValue
-				},
-				dimensions,
-				{
-					stretch,
-					scale,
-					fontSize
-				}
-			);
-		}
+		graph.draw();
 	}
 </script>
 
 <main class="flex items-center justify-center w-screen h-screen bg-zinc-700 text-zinc-200">
 	<div class="flex flex-col gap-4">
-		<canvas use:graph class="bg-white" />
-		<canvas use:pointX bind:this={pointCanvasEl} class="absolute" />
-		{#if formula.y}
-			<div class="flex gap-4">
-				<input
-					type="range"
-					bind:value={xValue}
-					on:input={() => {
-						pointX(pointCanvasEl);
-					}}
-					min={dimensions.horizontal.min}
-					max={dimensions.horizontal.max}
-					{step}
-				/>
-				<p>x = {xValue}</p>
-			</div>
-		{/if}
-
-		{#if formula.x}
-			<div class="flex gap-4">
-				<input
-					type="range"
-					bind:value={yValue}
-					on:input={() => {
-						pointY(pointCanvasEl);
-					}}
-					min={dimensions.vertical.min}
-					max={dimensions.vertical.max}
-					{step}
-				/>
-				<p>y = {yValue}</p>
-			</div>
+		<canvas use:drawGraph class="bg-white" width="1000" height="800" />
+		{#if graph}
+			<input
+				type="range"
+				min={graph.dimensions.horizontal.min}
+				max={graph.dimensions.horizontal.max}
+				step={graph.formula._step}
+				on:input={() => graph.setPoint({ x: xCoordinate })}
+				bind:value={xCoordinate}
+			/>
+			<input
+				type="range"
+				min={graph.dimensions.vertical.min}
+				max={graph.dimensions.vertical.max}
+				step={graph.formula._step}
+				on:input={() => graph.setPoint({ y: yCoordinate })}
+				bind:value={yCoordinate}
+			/>
 		{/if}
 	</div>
 </main>
