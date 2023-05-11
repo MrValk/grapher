@@ -13,12 +13,6 @@ declare global {
 	};
 
 	type Options = {
-		stretch?: { horizontal: number; vertical: number };
-		gridStep?: { horizontal: number; vertical: number };
-		fontSize?: number;
-	};
-
-	type DefinedOptions = {
 		stretch: { horizontal: number; vertical: number };
 		gridStep: { horizontal: number; vertical: number };
 		fontSize: number;

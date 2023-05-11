@@ -12,24 +12,18 @@ export class Graph {
 	private _points: Point[];
 	private _dimensions: Dimensions;
 	private _origin: Point;
-	private _options: DefinedOptions;
+	private _options: Options;
 
 	public constructor(
 		canvas: HTMLCanvasElement,
 		formula: Formula,
 		dimensions: Dimensions,
-		options?: Options
+		options: Options
 	) {
 		this._canvas = canvas;
 		this._formula = formula;
 		this._dimensions = dimensions;
-
-		// Setting default options
-		if (!options) options = {};
-		if (!options.stretch) options.stretch = { horizontal: 1, vertical: 1 };
-		if (!options.gridStep) options.gridStep = { horizontal: 1, vertical: 1 };
-		if (!options.fontSize) options.fontSize = 14;
-		this._options = options as DefinedOptions;
+		this._options = options;
 
 		this._axes = {
 			horizontal: this._formula._vars.horizontal || 'x',
