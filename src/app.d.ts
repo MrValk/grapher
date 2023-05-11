@@ -12,7 +12,11 @@ declare global {
 		[varName: string]: number;
 	};
 
-	type Options = {
+	type Coordinate = {
+		[varName: string]: number;
+	};
+
+	type DrawOptions = {
 		stretch: { horizontal: number; vertical: number };
 		gridStep: { horizontal: number; vertical: number };
 		fontSize: number;

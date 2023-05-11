@@ -12,13 +12,18 @@ export class Graph {
 	private _points: Point[];
 	private _dimensions: Dimensions;
 	private _origin: Point;
-	private _options: Options;
+	private _options: DrawOptions;
+
+	private _pointCoordinate?: Coordinate;
+	private _pointCanvas?: HTMLCanvasElement;
+	private _pointCtx?: CanvasRenderingContext2D;
 
 	public constructor(
 		canvas: HTMLCanvasElement,
 		formula: Formula,
 		dimensions: Dimensions,
-		options: Options
+		options: DrawOptions,
+		point?: Coordinate
 	) {
 		this._canvas = canvas;
 		this._formula = formula;
@@ -49,6 +54,23 @@ export class Graph {
 		this._points = this._formula.calcPoints(this._dimensions);
 		// Translate the points to canvas coordinates
 		this._points = this._points.map((point) => this._translatePoint(point));
+
+		if (point) {
+			// Create a canvas for the point, overlaying the graph canvas
+			const canvas = document.createElement('canvas');
+			canvas.width = this._canvas.width;
+			canvas.height = this._canvas.height;
+			canvas.style.position = 'absolute';
+			this._canvas.parentNode?.insertBefore(canvas, this._canvas.nextSibling);
+			this._pointCanvas = canvas;
+
+			const pointCtx = this._pointCanvas.getContext('2d');
+			if (!pointCtx) throw new Error('Could not get Canvas context');
+			this._pointCtx = pointCtx;
+
+			this._pointCoordinate = point;
+			this._drawPoint();
+		}
 	}
 
 	public draw() {
@@ -57,6 +79,24 @@ export class Graph {
 
 		// Draw the graph
 		this._drawGraph();
+	}
+
+	public setPoint(coordinate: { [varName: string]: number }) {
+		if (!this._pointCoordinate) throw new Error('Point canvas not initialized');
+
+		if (coordinate[this._axes.horizontal] !== undefined) {
+			delete this._pointCoordinate[this._axes.vertical];
+			this._pointCoordinate = {
+				[this._axes.horizontal]: coordinate[this._axes.horizontal]
+			};
+		} else if (coordinate[this._axes.vertical] !== undefined) {
+			delete this._pointCoordinate[this._axes.horizontal];
+			this._pointCoordinate = {
+				[this._axes.vertical]: coordinate[this._axes.vertical]
+			};
+		}
+
+		this._drawPoint();
 	}
 
 	private _drawGraph(canvas = this._canvas, ctx = this._ctx, points = this._points) {
@@ -93,6 +133,93 @@ export class Graph {
 		ctx.stroke();
 
 		ctx.strokeStyle = 'black';
+	}
+
+	private _drawPoint(
+		coordinate = this._pointCoordinate,
+		canvas = this._pointCanvas,
+		ctx = this._pointCtx,
+		fontSize = this._options.fontSize
+	) {
+		if (!coordinate || !canvas || !ctx)
+			return console.warn('Graph._drawPoint was called without a point set');
+
+		// Check if the point is on the graph
+		if (
+			coordinate[this._axes.horizontal] < this._dimensions.horizontal.min ||
+			coordinate[this._axes.horizontal] > this._dimensions.horizontal.max ||
+			coordinate[this._axes.vertical] < this._dimensions.vertical.min ||
+			coordinate[this._axes.vertical] > this._dimensions.vertical.max
+		)
+			return;
+
+		const points: Point[] = [];
+
+		if (this._formula._formulas.horizontal && coordinate[this._axes.vertical] !== undefined) {
+			for (const horizontal of this._formula._formulas.horizontal) {
+				try {
+					const horValue = this._formula.solve(horizontal, {
+						[this._axes.vertical]: coordinate[this._axes.vertical]
+					});
+					if (typeof horValue === 'number')
+						points.push({
+							[this._axes.horizontal]: horValue,
+							[this._axes.vertical]: coordinate[this._axes.vertical]
+						});
+				} catch {
+					continue;
+				}
+			}
+		}
+
+		if (this._formula._formulas.vertical && coordinate[this._axes.horizontal] !== undefined) {
+			for (const vertical of this._formula._formulas.vertical) {
+				try {
+					const verValue = this._formula.solve(vertical, {
+						[this._axes.horizontal]: coordinate[this._axes.horizontal]
+					});
+					if (typeof verValue === 'number')
+						points.push({
+							[this._axes.horizontal]: coordinate[this._axes.horizontal],
+							[this._axes.vertical]: verValue
+						});
+				} catch {
+					continue;
+				}
+			}
+		}
+
+		const radius = fontSize / 3;
+
+		// Wipe canvas
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		// Draw the points
+		for (const point of points) {
+			const translatedPoint = this._translatePoint(structuredClone(point));
+
+			ctx.fillStyle = 'darkred';
+			ctx.beginPath();
+			ctx.arc(
+				translatedPoint[this._axes.horizontal],
+				translatedPoint[this._axes.vertical],
+				radius,
+				0,
+				2 * Math.PI
+			);
+			ctx.fill();
+
+			// Draw the y value above it
+			ctx.textAlign = 'left';
+			ctx.textBaseline = 'middle';
+			ctx.fillStyle = '#777';
+			ctx.font = `${fontSize}px Poppins`;
+			ctx.fillText(
+				point[this._axes.vertical].toFixed(2).toString(),
+				translatedPoint[this._axes.horizontal] + 2 * radius,
+				translatedPoint[this._axes.vertical]
+			);
+		}
 	}
 
 	private _drawBackground(
@@ -288,5 +415,13 @@ export class Graph {
 			Math.abs(dimensions.horizontal.max - dimensions.horizontal.min) * scale * stretch.horizontal;
 		canvas.height =
 			Math.abs(dimensions.vertical.max - dimensions.vertical.min) * scale * stretch.vertical;
+	}
+
+	get formula(): Formula {
+		return this._formula;
+	}
+
+	get dimensions(): Dimensions {
+		return this._dimensions;
 	}
 }

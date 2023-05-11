@@ -5,7 +5,8 @@ export class GraphBuilder {
 	private _canvas: HTMLCanvasElement;
 	private _formula: Formula;
 	private _dimensions: Dimensions;
-	private _options: Options;
+	private _options: DrawOptions;
+	private _pointCoordinate?: Coordinate;
 
 	/**
 	 * Starts the graph builder with some default values.
@@ -15,6 +16,7 @@ export class GraphBuilder {
 	 * - Run the draw() method to draw the graph.
 	 * @param canvas The canvas element to draw a graph on
 	 * @param formula An instance of the Formula class
+	 * @returns The GraphBuilder instance
 	 */
 	public constructor(canvas: HTMLCanvasElement, formula: Formula) {
 		this._canvas = canvas;
@@ -91,10 +93,37 @@ export class GraphBuilder {
 	}
 
 	/**
+	 * Draws a point on the graph. Also enables altering the point's position on the Graph instance.
+	 * @param point One coordinate of a point in 2D space, using one of the same variable names as the formula
+	 * @returns The GraphBuilder instance
+	 */
+	public drawPoint(coordinate: Coordinate) {
+		const horVar = this._formula._vars.horizontal || 'x';
+		const verVar = this._formula._vars.vertical || 'y';
+
+		if (coordinate[horVar] !== undefined)
+			this._pointCoordinate = {
+				[horVar]: coordinate[horVar]
+			};
+		else if (coordinate[verVar] !== undefined)
+			this._pointCoordinate = {
+				[verVar]: coordinate[verVar]
+			};
+
+		return this;
+	}
+
+	/**
 	 * Builds and draws the graph on the canvas. Finishes the GraphBuilder chain.
 	 */
 	public draw() {
-		const graph = new Graph(this._canvas, this._formula, this._dimensions, this._options);
+		const graph = new Graph(
+			this._canvas,
+			this._formula,
+			this._dimensions,
+			this._options,
+			this._pointCoordinate
+		);
 		graph.draw();
 	}
 
@@ -103,6 +132,12 @@ export class GraphBuilder {
 	 * @returns A Graph instance with the current settings
 	 */
 	public get() {
-		return new Graph(this._canvas, this._formula, this._dimensions, this._options);
+		return new Graph(
+			this._canvas,
+			this._formula,
+			this._dimensions,
+			this._options,
+			this._pointCoordinate
+		);
 	}
 }
