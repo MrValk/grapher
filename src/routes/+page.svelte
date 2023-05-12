@@ -8,7 +8,8 @@
 	let yInput: HTMLInputElement;
 
 	function drawGraph(canvas: HTMLCanvasElement) {
-		const formula = new Formula('y = 1/x', 0.1);
+		const formula = new Formula('y = x^2', 0.1);
+		console.log(formula._formulas);
 		graph = new GraphBuilder(canvas, formula)
 			.drawPoint({
 				x: 0.2

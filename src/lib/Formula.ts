@@ -160,11 +160,17 @@ export class Formula {
 		const points: Point[] = [];
 
 		if (this._formulas.horizontal.length)
-			for (let y = dimensions.vertical.min - step; y <= dimensions.vertical.max + step; y += step) {
+			for (
+				let verValue = dimensions.vertical.min - step;
+				verValue <= dimensions.vertical.max + step;
+				verValue += step
+			) {
 				for (const xEqual of this._formulas.horizontal) {
 					let horValue: number;
 					try {
-						horValue = parseFloat(this.solve(xEqual, { [this._vars.vertical]: y }).toString());
+						horValue = parseFloat(
+							this.solve(xEqual, { [this._vars.vertical]: verValue }).toString()
+						);
 					} catch (_) {
 						continue;
 					}
@@ -172,25 +178,30 @@ export class Formula {
 						horValue >= dimensions.horizontal.min - step &&
 						horValue <= dimensions.horizontal.max + step
 					)
-						points.push({ [this._vars.horizontal]: horValue, [this._vars.vertical]: y });
+						points.push({ [this._vars.horizontal]: horValue, [this._vars.vertical]: verValue });
 				}
 			}
 
 		if (this._formulas.vertical.length)
 			for (
-				let x = dimensions.horizontal.min - step;
-				x <= dimensions.horizontal.max + step;
-				x += step
+				let horValue = dimensions.horizontal.min - step;
+				horValue <= dimensions.horizontal.max + step;
+				horValue += step
 			) {
 				for (const yEqual of this._formulas.vertical) {
-					let y: number;
+					let verValue: number;
 					try {
-						y = parseFloat(this.solve(yEqual, { [this._vars.horizontal]: x }).toString());
+						verValue = parseFloat(
+							this.solve(yEqual, { [this._vars.horizontal]: horValue }).toString()
+						);
 					} catch (_) {
 						continue;
 					}
-					if (y >= dimensions.vertical.min - step && y <= dimensions.vertical.max + step)
-						points.push({ [this._vars.horizontal]: x, [this._vars.vertical]: y });
+					if (
+						verValue >= dimensions.vertical.min - step &&
+						verValue <= dimensions.vertical.max + step
+					)
+						points.push({ [this._vars.horizontal]: horValue, [this._vars.vertical]: verValue });
 				}
 			}
 
