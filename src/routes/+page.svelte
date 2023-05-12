@@ -19,7 +19,8 @@
 	});
 
 	function drawGraph(canvas: HTMLCanvasElement) {
-		const formula = new Formula('y = 1 / (1 + E^(-x))', 0.1);
+		const formula = new Formula('y^2 + x^2 = 16', 0.1);
+		console.log(formula._formulas);
 		graph = new GraphBuilder(canvas, formula)
 			.drawPoint({
 				x: 0

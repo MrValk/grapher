@@ -93,29 +93,35 @@ export class Formula {
 		else if (startsWith === 'horizontal')
 			this._formulas.horizontal.push(parsedFormula.replace(`${this._vars.horizontal}=`, ''));
 
-		// Try to solve for the vertical variable
-		if (this._vars.vertical && startsWith !== 'vertical')
-			try {
-				this._formulas.vertical = this._solveFor(formula, this._vars.vertical);
-			} catch {
-				console.warn(`Formula could not be solved for ${this._vars.vertical}`);
-			}
-		// Try to solve for the horizontal variable
-		if (this._vars.horizontal && startsWith !== 'horizontal')
-			try {
-				this._formulas.horizontal = this._solveFor(formula, this._vars.horizontal);
-			} catch {
-				console.warn(`Formula could not be solved for ${this._vars.horizontal}`);
-			}
+		if (!this._hasSolveBan(formula)) {
+			// Try to solve for the vertical variable
+			if (this._vars.vertical && startsWith !== 'vertical')
+				try {
+					const solution = this._solveFor(formula, this._vars.vertical);
+					if (this._hasSolveBan(solution)) throw new Error('Solution contains banned characters');
+					this._formulas.vertical = solution;
+				} catch {
+					console.warn(`Formula could not be solved for ${this._vars.vertical}`);
+				}
+			// Try to solve for the horizontal variable
+			if (this._vars.horizontal && startsWith !== 'horizontal')
+				try {
+					const solution = this._solveFor(formula, this._vars.horizontal);
+					if (this._hasSolveBan(solution)) throw new Error('Solution contains banned characters');
+					this._formulas.horizontal = solution;
+				} catch {
+					console.warn(`Formula could not be solved for ${this._vars.horizontal}`);
+				}
 
-		// For single-variables formulas that don't start with the variable, assume it equals the other variable
-		if (!startsWith && !(this._vars.vertical && this._vars.horizontal)) {
-			if (this._vars.vertical) {
-				this._vars.horizontal = 'x';
-				this._formulas.horizontal.push(formula);
-			} else if (this._vars.horizontal) {
-				this._vars.vertical = 'y';
-				this._formulas.vertical.push(formula);
+			// For single-variables formulas that don't start with the variable, assume it equals the other variable
+			if (!startsWith && !(this._vars.vertical && this._vars.horizontal)) {
+				if (this._vars.vertical) {
+					this._vars.horizontal = 'x';
+					this._formulas.horizontal.push(formula);
+				} else if (this._vars.horizontal) {
+					this._vars.vertical = 'y';
+					this._formulas.vertical.push(formula);
+				}
 			}
 		}
 
@@ -250,5 +256,15 @@ export class Formula {
 		formula = formula.replace(/ln/g, 'log');
 
 		return formula;
+	}
+
+	private _hasSolveBan(formula: string | string[]): boolean {
+		if (Array.isArray(formula)) {
+			for (const form of formula) {
+				if (this._hasSolveBan(form)) return true;
+			}
+		}
+
+		return formula.includes('log') || formula.includes('ln');
 	}
 }
