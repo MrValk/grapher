@@ -158,7 +158,7 @@ export class Formula {
 		const points: Point[] = [];
 
 		if (this._formulas.horizontal)
-			for (let y = dimensions.vertical.min; y <= dimensions.vertical.max; y += step) {
+			for (let y = dimensions.vertical.min - step; y <= dimensions.vertical.max + step; y += step) {
 				for (const xEqual of this._formulas.horizontal) {
 					let horValue: number;
 					try {
@@ -166,13 +166,20 @@ export class Formula {
 					} catch (_) {
 						continue;
 					}
-					if (horValue >= dimensions.horizontal.min && horValue <= dimensions.horizontal.max)
+					if (
+						horValue >= dimensions.horizontal.min - step &&
+						horValue <= dimensions.horizontal.max + step
+					)
 						points.push({ [this._vars.horizontal]: horValue, [this._vars.vertical]: y });
 				}
 			}
 
 		if (this._formulas.vertical)
-			for (let x = dimensions.horizontal.min; x <= dimensions.horizontal.max; x += step) {
+			for (
+				let x = dimensions.horizontal.min - step;
+				x <= dimensions.horizontal.max + step;
+				x += step
+			) {
 				for (const yEqual of this._formulas.vertical) {
 					let y: number;
 					try {
@@ -180,7 +187,7 @@ export class Formula {
 					} catch (_) {
 						continue;
 					}
-					if (y >= dimensions.vertical.min && y <= dimensions.vertical.max)
+					if (y >= dimensions.vertical.min - step && y <= dimensions.vertical.max + step)
 						points.push({ [this._vars.horizontal]: x, [this._vars.vertical]: y });
 				}
 			}

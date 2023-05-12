@@ -4,8 +4,8 @@
 	import { GraphBuilder } from '$lib/GraphBuilder';
 
 	let graph: Graph;
-	let xCoordinate: number;
-	let yCoordinate: number;
+	let xInput: HTMLInputElement;
+	let yInput: HTMLInputElement;
 
 	function drawGraph(canvas: HTMLCanvasElement) {
 		const formula = new Formula('y = tan(x)', 0.1);
@@ -46,16 +46,22 @@
 				min={graph.dimensions.horizontal.min}
 				max={graph.dimensions.horizontal.max}
 				step={graph.formula._step}
-				on:input={() => graph.setPoint({ x: xCoordinate })}
-				bind:value={xCoordinate}
+				on:input={() => {
+					graph.setPoint({ x: xInput.valueAsNumber });
+					if (graph.drawPoints) yInput.valueAsNumber = graph.drawPoints[0][graph.axes.vertical];
+				}}
+				bind:this={xInput}
 			/>
 			<input
 				type="range"
 				min={graph.dimensions.vertical.min}
 				max={graph.dimensions.vertical.max}
 				step={graph.formula._step}
-				on:input={() => graph.setPoint({ y: yCoordinate })}
-				bind:value={yCoordinate}
+				on:input={() => {
+					graph.setPoint({ y: yInput.valueAsNumber });
+					if (graph.drawPoints) xInput.valueAsNumber = graph.drawPoints[0][graph.axes.vertical];
+				}}
+				bind:this={yInput}
 			/>
 		{/if}
 	</div>

@@ -14,6 +14,7 @@ export class Graph {
 	private _origin: Point;
 	private _options: DrawOptions;
 
+	private _drawPoints?: Point[];
 	private _pointCoordinate?: Coordinate;
 	private _pointCanvas?: HTMLCanvasElement;
 	private _pointCtx?: CanvasRenderingContext2D;
@@ -215,11 +216,15 @@ export class Graph {
 			ctx.fillStyle = '#777';
 			ctx.font = `${fontSize}px Poppins`;
 			ctx.fillText(
-				point[this._axes.vertical].toFixed(2).toString(),
+				point[this._axes.vertical]
+					.toFixed(this._formula._step.toString().split('.')[1].length)
+					.toString(),
 				translatedPoint[this._axes.horizontal] + 2 * radius,
 				translatedPoint[this._axes.vertical]
 			);
 		}
+
+		this._drawPoints = points;
 	}
 
 	private _drawBackground(
@@ -421,7 +426,15 @@ export class Graph {
 		return this._formula;
 	}
 
+	get axes(): { horizontal: string; vertical: string } {
+		return this._axes;
+	}
+
 	get dimensions(): Dimensions {
 		return this._dimensions;
+	}
+
+	get drawPoints(): Point[] | undefined {
+		return this._drawPoints;
 	}
 }
