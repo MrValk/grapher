@@ -1,22 +1,38 @@
 <script lang="ts">
+	// import nerdamer from 'nerdamer';
+	// import 'nerdamer/Algebra.js';
+	// import 'nerdamer/Calculus.js';
+	// import 'nerdamer/Solve.js';
+
 	import { Formula } from '$lib/Formula';
 	import type { Graph } from '$lib/Graph';
 	import { GraphBuilder } from '$lib/GraphBuilder';
+	import { onMount } from 'svelte';
 
 	let graph: Graph;
 	let xInput: HTMLInputElement;
 	let yInput: HTMLInputElement;
 
+	onMount(() => {
+		// console.log(nerdamer('asin(x)', { x: '2' }, ['numer']).text());
+		updateSliders();
+	});
+
 	function drawGraph(canvas: HTMLCanvasElement) {
-		const formula = new Formula('y = x^2', 0.1);
-		console.log(formula._formulas);
+		const formula = new Formula('y = 1 / (1 + E^(-x))', 0.1);
 		graph = new GraphBuilder(canvas, formula)
 			.drawPoint({
-				x: 0.2
+				x: 0
 			})
 			.get();
-
 		graph.draw();
+	}
+
+	function updateSliders() {
+		if (graph.drawPoints && graph.drawPoints.length) {
+			if (xInput) xInput.valueAsNumber = graph.drawPoints[0][graph.axes.horizontal];
+			if (yInput) yInput.valueAsNumber = graph.drawPoints[0][graph.axes.vertical];
+		}
 	}
 </script>
 
@@ -32,8 +48,7 @@
 					step={graph.formula._step}
 					on:input={() => {
 						graph.setPoint({ [graph.axes.horizontal]: xInput.valueAsNumber });
-						if (graph.drawPoints && graph.drawPoints.length && yInput)
-							yInput.valueAsNumber = graph.drawPoints[0][graph.axes.vertical];
+						updateSliders();
 					}}
 					bind:this={xInput}
 				/>
@@ -46,8 +61,7 @@
 					step={graph.formula._step}
 					on:input={() => {
 						graph.setPoint({ [graph.axes.vertical]: yInput.valueAsNumber });
-						if (graph.drawPoints && graph.drawPoints.length && xInput)
-							xInput.valueAsNumber = graph.drawPoints[0][graph.axes.horizontal];
+						updateSliders();
 					}}
 					bind:this={yInput}
 				/>

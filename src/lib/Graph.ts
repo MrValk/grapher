@@ -100,7 +100,7 @@ export class Graph {
 		this._drawPoint();
 	}
 
-	private _drawGraph(canvas = this._canvas, ctx = this._ctx, points = this._points) {
+	private _drawGraph(ctx = this._ctx, points = this._points) {
 		const namedPoints = points.map((point) => {
 			return {
 				horizontal: point[this._axes.horizontal],
@@ -113,16 +113,21 @@ export class Graph {
 		ctx.beginPath();
 		ctx.moveTo(namedPoints[0].horizontal, namedPoints[0].vertical);
 		for (let i = 1; i < namedPoints.length; i++) {
-			// End the stroke if a vertical asymptote is reached
-			if (Math.abs(namedPoints[i - 1].vertical - namedPoints[i].vertical) > canvas.height / 2) {
-				ctx.stroke();
-				ctx.beginPath();
-				ctx.moveTo(namedPoints[i].horizontal, namedPoints[i].vertical);
-				continue;
-			}
+			const distToNext = Math.sqrt(
+				Math.pow(namedPoints[i].horizontal - namedPoints[i - 1].horizontal, 2) +
+					Math.pow(namedPoints[i].vertical - namedPoints[i - 1].vertical, 2)
+			);
 
-			// End the stroke if a horizontal asymptote is reached
-			if (Math.abs(namedPoints[i - 1].horizontal - namedPoints[i].horizontal) > canvas.width / 2) {
+			let distToNext2: number | undefined;
+			if (namedPoints[i + 1])
+				distToNext2 = Math.sqrt(
+					Math.pow(namedPoints[i + 1].horizontal - namedPoints[i].horizontal, 2) +
+						Math.pow(namedPoints[i + 1].vertical - namedPoints[i].vertical, 2)
+				);
+
+			// End the stroke if the distance to the next point is way larger than the distance between
+			// the next point and the point after that
+			if (distToNext2 && distToNext > distToNext2 * 2) {
 				ctx.stroke();
 				ctx.beginPath();
 				ctx.moveTo(namedPoints[i].horizontal, namedPoints[i].vertical);
@@ -145,18 +150,12 @@ export class Graph {
 		if (!coordinate || !canvas || !ctx)
 			return console.warn('Graph._drawPoint was called without a point set');
 
-		// Check if the point is on the graph
-		if (
-			coordinate[this._axes.horizontal] < this._dimensions.horizontal.min ||
-			coordinate[this._axes.horizontal] > this._dimensions.horizontal.max ||
-			coordinate[this._axes.vertical] < this._dimensions.vertical.min ||
-			coordinate[this._axes.vertical] > this._dimensions.vertical.max
-		)
-			return;
-
 		const points: Point[] = [];
 
-		if (this._formula._formulas.horizontal.length && coordinate[this._axes.vertical] !== undefined) {
+		if (
+			this._formula._formulas.horizontal.length &&
+			coordinate[this._axes.vertical] !== undefined
+		) {
 			for (const horizontal of this._formula._formulas.horizontal) {
 				try {
 					const horValue = this._formula.solve(horizontal, {
@@ -173,7 +172,10 @@ export class Graph {
 			}
 		}
 
-		if (this._formula._formulas.vertical.length && coordinate[this._axes.horizontal] !== undefined) {
+		if (
+			this._formula._formulas.vertical.length &&
+			coordinate[this._axes.horizontal] !== undefined
+		) {
 			for (const vertical of this._formula._formulas.vertical) {
 				try {
 					const verValue = this._formula.solve(vertical, {
@@ -195,6 +197,10 @@ export class Graph {
 		// Wipe canvas
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+		// Trim the decimal count to one more than the decimal count of the step used in calculating the points
+		const decimals = this._formula._step.toString().split('.')[1];
+		const decimalCount = decimals ? decimals.length + 1 : 1;
+
 		// Draw the points
 		for (const point of points) {
 			const translatedPoint = this._translatePoint(structuredClone(point));
@@ -210,18 +216,17 @@ export class Graph {
 			);
 			ctx.fill();
 
-			// Draw the y value above it
+			// Draw the coordinates to the top right of it
 			ctx.textAlign = 'left';
-			ctx.textBaseline = 'middle';
+			ctx.textBaseline = 'bottom';
 			ctx.fillStyle = '#777';
 			ctx.font = `${fontSize}px Poppins`;
 			ctx.fillText(
-				point[this._axes.vertical]
-					// Trim the decimal count to one more than the decimal count of the step used in calculating the points
-					.toFixed(this._formula._step.toString().split('.')[1].length + 1)
-					.toString(),
-				translatedPoint[this._axes.horizontal] + 2 * radius,
-				translatedPoint[this._axes.vertical]
+				`(${point[this._axes.horizontal].toFixed(decimalCount)}, ${point[
+					this._axes.vertical
+				].toFixed(decimalCount)})`,
+				translatedPoint[this._axes.horizontal] + radius,
+				translatedPoint[this._axes.vertical] - radius
 			);
 		}
 
@@ -433,6 +438,10 @@ export class Graph {
 
 	get dimensions(): Dimensions {
 		return this._dimensions;
+	}
+
+	get points(): Point[] {
+		return this._points;
 	}
 
 	get drawPoints(): Point[] | undefined {

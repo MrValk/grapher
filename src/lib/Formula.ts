@@ -41,7 +41,12 @@ export class Formula {
 		this._consts = consts;
 
 		// Fill in the constant values
-		if (consts) formula = this.solve(formula, consts).toString();
+		if (consts) {
+			const solution = this.solve(formula, consts);
+			if (solution === undefined)
+				throw new Error('Formula could not be solved with the given constants');
+			formula = solution.toString();
+		}
 		formula = this._parseFormula(formula);
 
 		const variables = nerdamer(formula).variables();
@@ -67,46 +72,55 @@ export class Formula {
 				? [variables.find((v) => v !== 'y'), 'y']
 				: [variables[1], variables[0]];
 
-		// Solve for both variables
+		// Determine which variable to solve for (default to vertical)
 		this._formulas = {
 			horizontal: [],
 			vertical: []
 		};
 
-		// If the formula already starts with horizontalVar = something, don't solve for it
-		if (this._vars.horizontal) {
-			if (formula.replace(/\s/g, '').startsWith(`${this._vars.horizontal}=`))
-				this._formulas.horizontal.push(
-					formula.replace(/\s/g, '').replace(`${this._vars.horizontal}=`, '')
-				);
-			else
-				try {
-					this._formulas.horizontal = this._solveFor(formula, this._vars.horizontal);
-				} catch (e) {
-					console.error(e);
-				}
-		}
+		const parsedFormula = formula.replace(/\s/g, '');
+		const startsWith =
+			this._vars.vertical && parsedFormula.startsWith(`${this._vars.vertical}=`)
+				? 'vertical'
+				: this._vars.horizontal && parsedFormula.startsWith(`${this._vars.horizontal}=`)
+				? 'horizontal'
+				: undefined;
 
-		// If the formula already starts with verticalVar = something, don't solve for it
-		if (this._vars.vertical) {
-			if (formula.replace(/\s/g, '').startsWith(`${this._vars.vertical}=`))
-				this._formulas.vertical.push(
-					formula.replace(/\s/g, '').replace(`${this._vars.vertical}=`, '')
-				);
-			else
-				try {
-					this._formulas.vertical = this._solveFor(formula, this._vars.vertical);
-				} catch (e) {
-					console.error(e);
-				}
+		// If the formula already starts with verticalVar =, take that as the formula
+		if (startsWith === 'vertical')
+			this._formulas.vertical.push(parsedFormula.replace(`${this._vars.vertical}=`, ''));
+		// If the formula already starts with horizontalVar =, take that as the formula
+		else if (startsWith === 'horizontal')
+			this._formulas.horizontal.push(parsedFormula.replace(`${this._vars.horizontal}=`, ''));
+
+		// Try to solve for the vertical variable
+		if (this._vars.vertical && startsWith !== 'vertical')
+			try {
+				this._formulas.vertical = this._solveFor(formula, this._vars.vertical);
+			} catch {
+				console.warn(`Formula could not be solved for ${this._vars.vertical}`);
+			}
+		// Try to solve for the horizontal variable
+		if (this._vars.horizontal && startsWith !== 'horizontal')
+			try {
+				this._formulas.horizontal = this._solveFor(formula, this._vars.horizontal);
+			} catch {
+				console.warn(`Formula could not be solved for ${this._vars.horizontal}`);
+			}
+
+		// For single-variables formulas that don't start with the variable, assume it equals the other variable
+		if (!startsWith && !(this._vars.vertical && this._vars.horizontal)) {
+			if (this._vars.vertical) {
+				this._vars.horizontal = 'x';
+				this._formulas.horizontal.push(formula);
+			} else if (this._vars.horizontal) {
+				this._vars.vertical = 'y';
+				this._formulas.vertical.push(formula);
+			}
 		}
 
 		if (this._formulas.vertical.length === 0 && this._formulas.horizontal.length === 0)
 			throw new Error('Formula could not be solved for either variable');
-		if (this._vars.horizontal && this._formulas.horizontal.length === 0)
-			console.warn(`Formula could not be solved for ${this._vars.horizontal}`);
-		if (this._vars.vertical && this._formulas.vertical.length === 0)
-			console.warn(`Formula could not be solved for ${this._vars.vertical}`);
 	}
 
 	/**
@@ -125,32 +139,28 @@ export class Formula {
 			throw new Error('minY must be less than maxY');
 		// #endregion
 
-		// Optimization for equations with only one variable
+		// Optimization for linear equations with only one variable
 		if (!this._vars.horizontal || !this._vars.vertical) {
 			if (this._vars.horizontal === 'x' && this._formulas.horizontal.length) {
 				const x = parseFloat(this._formulas.horizontal[0]);
-				return [
-					{
+				const points: Point[] = [];
+				for (let y = dimensions.vertical.min; y <= dimensions.vertical.max; y += step) {
+					points.push({
 						x,
-						y: dimensions.vertical.min
-					},
-					{
-						x,
-						y: dimensions.vertical.max
-					}
-				];
+						y
+					});
+				}
+				return points;
 			} else if (this._vars.vertical && this._formulas.vertical.length) {
-				const value = parseFloat(this._formulas.vertical[0]);
-				return [
-					{
-						x: dimensions.horizontal.min,
-						[this._vars.vertical]: value
-					},
-					{
-						x: dimensions.horizontal.max,
-						[this._vars.vertical]: value
-					}
-				];
+				const verValue = parseFloat(this._formulas.vertical[0]);
+				const points: Point[] = [];
+				for (let x = dimensions.horizontal.min; x <= dimensions.horizontal.max; x += step) {
+					points.push({
+						x,
+						[this._vars.vertical]: verValue
+					});
+				}
+				return points;
 			}
 		}
 
@@ -160,46 +170,46 @@ export class Formula {
 		const points: Point[] = [];
 
 		if (this._formulas.horizontal.length)
-			for (
-				let verValue = dimensions.vertical.min - step;
-				verValue <= dimensions.vertical.max + step;
-				verValue += step
-			) {
-				for (const xEqual of this._formulas.horizontal) {
+			for (const xEqual of this._formulas.horizontal) {
+				for (
+					let verValue = dimensions.vertical.min;
+					verValue <= dimensions.vertical.max;
+					verValue += step
+				) {
 					let horValue: number;
 					try {
-						horValue = parseFloat(
-							this.solve(xEqual, { [this._vars.vertical]: verValue }).toString()
-						);
+						const solution = this.solve(xEqual, { [this._vars.vertical]: verValue });
+						if (solution === undefined) continue;
+						horValue = parseFloat(solution.toString());
 					} catch (_) {
 						continue;
 					}
 					if (
-						horValue >= dimensions.horizontal.min - step &&
-						horValue <= dimensions.horizontal.max + step
+						horValue >= dimensions.horizontal.min - 10 * step &&
+						horValue <= dimensions.horizontal.max + 10 * step
 					)
 						points.push({ [this._vars.horizontal]: horValue, [this._vars.vertical]: verValue });
 				}
 			}
 
 		if (this._formulas.vertical.length)
-			for (
-				let horValue = dimensions.horizontal.min - step;
-				horValue <= dimensions.horizontal.max + step;
-				horValue += step
-			) {
-				for (const yEqual of this._formulas.vertical) {
+			for (const yEqual of this._formulas.vertical) {
+				for (
+					let horValue = dimensions.horizontal.min;
+					horValue <= dimensions.horizontal.max;
+					horValue += step
+				) {
 					let verValue: number;
 					try {
-						verValue = parseFloat(
-							this.solve(yEqual, { [this._vars.horizontal]: horValue }).toString()
-						);
+						const solution = this.solve(yEqual, { [this._vars.horizontal]: horValue });
+						if (solution === undefined) continue;
+						verValue = parseFloat(solution.toString());
 					} catch (_) {
 						continue;
 					}
 					if (
-						verValue >= dimensions.vertical.min - step &&
-						verValue <= dimensions.vertical.max + step
+						verValue >= dimensions.vertical.min - 10 * step &&
+						verValue <= dimensions.vertical.max + 10 * step
 					)
 						points.push({ [this._vars.horizontal]: horValue, [this._vars.vertical]: verValue });
 				}
@@ -208,7 +218,7 @@ export class Formula {
 		return points;
 	}
 
-	public solve(formula: string, vars: { [varName: string]: number }): number | string {
+	public solve(formula: string, vars: { [varName: string]: number }): number | string | undefined {
 		formula = this._parseFormula(formula);
 
 		const parsedVars: { [varName: string]: string } = {};
@@ -217,6 +227,8 @@ export class Formula {
 		}
 
 		const result = nerdamer(formula, parsedVars, ['numer']).text();
+
+		if (result.includes('i')) return undefined;
 
 		if (!isNumeric(result)) return result;
 		return parseFloat(result);
