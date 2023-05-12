@@ -156,7 +156,7 @@ export class Graph {
 
 		const points: Point[] = [];
 
-		if (this._formula._formulas.horizontal && coordinate[this._axes.vertical] !== undefined) {
+		if (this._formula._formulas.horizontal.length && coordinate[this._axes.vertical] !== undefined) {
 			for (const horizontal of this._formula._formulas.horizontal) {
 				try {
 					const horValue = this._formula.solve(horizontal, {
@@ -173,7 +173,7 @@ export class Graph {
 			}
 		}
 
-		if (this._formula._formulas.vertical && coordinate[this._axes.horizontal] !== undefined) {
+		if (this._formula._formulas.vertical.length && coordinate[this._axes.horizontal] !== undefined) {
 			for (const vertical of this._formula._formulas.vertical) {
 				try {
 					const verValue = this._formula.solve(vertical, {
@@ -217,7 +217,8 @@ export class Graph {
 			ctx.font = `${fontSize}px Poppins`;
 			ctx.fillText(
 				point[this._axes.vertical]
-					.toFixed(this._formula._step.toString().split('.')[1].length)
+					// Trim the decimal count to one more than the decimal count of the step used in calculating the points
+					.toFixed(this._formula._step.toString().split('.')[1].length + 1)
 					.toString(),
 				translatedPoint[this._axes.horizontal] + 2 * radius,
 				translatedPoint[this._axes.vertical]

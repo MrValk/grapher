@@ -8,8 +8,8 @@ import { isNumeric } from '$lib/utils/isNumeric';
 export class Formula {
 	// Formula related
 	public readonly _formulas: {
-		horizontal?: string[];
-		vertical?: string[];
+		horizontal: string[];
+		vertical: string[];
 	};
 	public readonly _vars: {
 		horizontal?: string;
@@ -42,6 +42,7 @@ export class Formula {
 
 		// Fill in the constant values
 		if (consts) formula = this.solve(formula, consts).toString();
+		formula = this._parseFormula(formula);
 
 		const variables = nerdamer(formula).variables();
 
@@ -67,9 +68,10 @@ export class Formula {
 				: [variables[1], variables[0]];
 
 		// Solve for both variables
-		this._formulas = {};
-		this._formulas.horizontal = [];
-		this._formulas.vertical = [];
+		this._formulas = {
+			horizontal: [],
+			vertical: []
+		};
 
 		// If the formula already starts with horizontalVar = something, don't solve for it
 		if (this._vars.horizontal) {
@@ -125,7 +127,7 @@ export class Formula {
 
 		// Optimization for equations with only one variable
 		if (!this._vars.horizontal || !this._vars.vertical) {
-			if (this._vars.horizontal === 'x' && this._formulas.horizontal) {
+			if (this._vars.horizontal === 'x' && this._formulas.horizontal.length) {
 				const x = parseFloat(this._formulas.horizontal[0]);
 				return [
 					{
@@ -137,7 +139,7 @@ export class Formula {
 						y: dimensions.vertical.max
 					}
 				];
-			} else if (this._vars.vertical && this._formulas.vertical) {
+			} else if (this._vars.vertical && this._formulas.vertical.length) {
 				const value = parseFloat(this._formulas.vertical[0]);
 				return [
 					{
@@ -157,7 +159,7 @@ export class Formula {
 		// Calculate the points
 		const points: Point[] = [];
 
-		if (this._formulas.horizontal)
+		if (this._formulas.horizontal.length)
 			for (let y = dimensions.vertical.min - step; y <= dimensions.vertical.max + step; y += step) {
 				for (const xEqual of this._formulas.horizontal) {
 					let horValue: number;
@@ -174,7 +176,7 @@ export class Formula {
 				}
 			}
 
-		if (this._formulas.vertical)
+		if (this._formulas.vertical.length)
 			for (
 				let x = dimensions.horizontal.min - step;
 				x <= dimensions.horizontal.max + step;

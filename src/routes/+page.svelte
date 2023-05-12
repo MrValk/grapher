@@ -8,26 +8,8 @@
 	let yInput: HTMLInputElement;
 
 	function drawGraph(canvas: HTMLCanvasElement) {
-		const formula = new Formula('y = tan(x)', 0.1);
+		const formula = new Formula('y = 1/x', 0.1);
 		graph = new GraphBuilder(canvas, formula)
-			.setDimensions({
-				horizontal: {
-					min: -6,
-					max: 6
-				},
-				vertical: {
-					min: -0.5,
-					max: 1.5
-				}
-			})
-			.setStretch({
-				horizontal: 1,
-				vertical: 4
-			})
-			.setGridStep({
-				horizontal: 2,
-				vertical: 0.5
-			})
 			.drawPoint({
 				x: 0.2
 			})
@@ -41,28 +23,34 @@
 	<div class="flex flex-col gap-4">
 		<canvas use:drawGraph class="bg-white" width="1000" height="800" />
 		{#if graph}
-			<input
-				type="range"
-				min={graph.dimensions.horizontal.min}
-				max={graph.dimensions.horizontal.max}
-				step={graph.formula._step}
-				on:input={() => {
-					graph.setPoint({ x: xInput.valueAsNumber });
-					if (graph.drawPoints) yInput.valueAsNumber = graph.drawPoints[0][graph.axes.vertical];
-				}}
-				bind:this={xInput}
-			/>
-			<input
-				type="range"
-				min={graph.dimensions.vertical.min}
-				max={graph.dimensions.vertical.max}
-				step={graph.formula._step}
-				on:input={() => {
-					graph.setPoint({ y: yInput.valueAsNumber });
-					if (graph.drawPoints) xInput.valueAsNumber = graph.drawPoints[0][graph.axes.vertical];
-				}}
-				bind:this={yInput}
-			/>
+			{#if graph.formula._formulas.vertical.length}
+				<input
+					type="range"
+					min={graph.dimensions.horizontal.min}
+					max={graph.dimensions.horizontal.max}
+					step={graph.formula._step}
+					on:input={() => {
+						graph.setPoint({ [graph.axes.horizontal]: xInput.valueAsNumber });
+						if (graph.drawPoints && graph.drawPoints.length && yInput)
+							yInput.valueAsNumber = graph.drawPoints[0][graph.axes.vertical];
+					}}
+					bind:this={xInput}
+				/>
+			{/if}
+			{#if graph.formula._formulas.horizontal.length}
+				<input
+					type="range"
+					min={graph.dimensions.vertical.min}
+					max={graph.dimensions.vertical.max}
+					step={graph.formula._step}
+					on:input={() => {
+						graph.setPoint({ [graph.axes.vertical]: yInput.valueAsNumber });
+						if (graph.drawPoints && graph.drawPoints.length && xInput)
+							xInput.valueAsNumber = graph.drawPoints[0][graph.axes.horizontal];
+					}}
+					bind:this={yInput}
+				/>
+			{/if}
 		{/if}
 	</div>
 </main>
